@@ -4,6 +4,6 @@ server:
 
 eureka:
   client:
-    register-with-eureka: false # Eureka ?? ??
+    register-with-eureka: false # Eureka 에 등록하지 않음
     fetch-registry: false
 
