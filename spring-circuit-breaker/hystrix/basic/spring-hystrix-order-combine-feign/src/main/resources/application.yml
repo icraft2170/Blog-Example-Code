@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: ORDER-SERVICE
+
+server:
+  port: 9002
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8900/eureka
+
+## Java Feign 과 Circuitbreaker 를 사용할 수 있도록 함.
+feign:
+  circuitbreaker:
+    enabled: true
