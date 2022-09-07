@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: API-GATEWAY-SERVICE
+  cloud:
+    discovery:
+      locator:
+        enabled: true
+    gateway:
+      default-filters:
+        - name: PostFilter
+      routes:
+        - id: USER-SERVICE
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/user/**
+        - id: ORDER-SERVICE
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/order/**
+
+
+server:
+  port: 8072
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8900/eureka
+

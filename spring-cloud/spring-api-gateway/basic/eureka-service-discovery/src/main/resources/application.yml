@@ -1,0 +1,9 @@
+server:
+  port: 8900
+
+
+eureka:
+  client:
+    register-with-eureka: false # not registered with eureka
+    fetch-registry: false
+
