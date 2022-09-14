@@ -3,10 +3,10 @@ package operator;
 import static java.util.stream.Collectors.toList;
 
 import java.util.List;
-import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
  *                          -> onNext() ...
  *                          -> onComplete
  *
- * Operator : 데이터 이동 과정에서 가공, 일종의 Stream Method 메커니
+ * Operator : 데이터 이동 과정에서 가공, 일종의 Stream Method 메커니즘
  * Map :
  */
 @Slf4j
@@ -33,24 +33,88 @@ public class PubSub {
 
   public static void main(String[] args) {
     Publisher<Integer> pub = iterPub(Stream.iterate(1, i -> i + 1).limit(10).collect(toList()));
-    Publisher<Integer> mapPub = mapPub(pub, (Function<Integer, Integer>) (s -> s * 10));
-    Publisher<Integer> map2Pub = mapPub(mapPub, (Function<Integer, Integer>) (s -> s * 10));
-    Subscriber<Integer> sub = logsub();
-    map2Pub.subscribe(sub);
+//    Publisher<String> mapPub = mapPub(pub, s -> "[" + s + "]");
+//    Publisher<Integer> sumPub = sumPub(pub);
+    Publisher<String> reduce = reduce(pub, "", (a,b) -> a + " - " + b);
+//    Subscriber<Integer> sub = logsub();
+    reduce.subscribe(logsub());
   }
 
-  private static Publisher<Integer> mapPub(Publisher<Integer> pub, Function<Integer, Integer> fuc) {
-    return new Publisher<Integer>() {
+  private static <T, R> Publisher<R> reduce(Publisher<T> pub, R init, BiFunction<R, T, R> function) {
+    return new Publisher<R>() {
       @Override
-      public void subscribe(Subscriber<? super Integer> subscriber) {
-        pub.subscribe(new Subscriber<Integer>() {
+      public void subscribe(Subscriber<? super R> subscriber) {
+        pub.subscribe(new Subscriber<T>() {
+          R result = init;
           @Override
           public void onSubscribe(Subscription subscription) {
             subscriber.onSubscribe(subscription);
           }
 
           @Override
+          public void onNext(T item) {
+            result = function.apply(result, item);
+          }
+
+          @Override
+          public void onError(Throwable throwable) {
+            subscriber.onError(throwable);
+          }
+
+          @Override
+          public void onComplete() {
+            subscriber.onNext(result);
+            subscriber.onComplete();
+          }
+        });
+      }
+    };
+  }
+
+  private static Publisher<Integer> sumPub(Publisher<Integer> pub) {
+    return new Publisher<Integer>() {
+      @Override
+      public void subscribe(Subscriber<? super Integer> subscriber) {
+        pub.subscribe(new Subscriber<Integer>() {
+          int sum = 0;
+          @Override
+          public void onSubscribe(Subscription subscription) {
+            subscriber.onSubscribe(subscription);
+          }
+
+
+          @Override
           public void onNext(Integer item) {
+            sum += item;
+          }
+
+          @Override
+          public void onError(Throwable throwable) {
+            subscriber.onError(throwable);
+          }
+          @Override
+          public void onComplete() {
+              subscriber.onNext(sum);
+              subscriber.onComplete();
+          }
+        });
+      }
+    };
+  }
+
+
+  private static <T, R> Publisher<R> mapPub(Publisher<T> pub, Function<T, R> fuc) {
+    return new Publisher<R>() {
+      @Override
+      public void subscribe(Subscriber<? super R> subscriber) {
+        pub.subscribe(new Subscriber<T>() {
+          @Override
+          public void onSubscribe(Subscription subscription) {
+            subscriber.onSubscribe(subscription);
+          }
+
+          @Override
+          public void onNext(T item) {
             subscriber.onNext(fuc.apply(item));
           }
 
@@ -67,9 +131,8 @@ public class PubSub {
       }
     };
   }
-
-  private static Subscriber<Integer> logsub() {
-    return new Subscriber<Integer>() {
+  private static <T> Subscriber<T> logsub() {
+    return new Subscriber<T>() {
       @Override
       public void onSubscribe(Subscription subscription) {
         log.debug("onSubscribe: ");
@@ -77,7 +140,7 @@ public class PubSub {
       }
 
       @Override
-      public void onNext(Integer item) {
+      public void onNext(T item) {
         log.debug("onNext: {}", item);
       }
 
