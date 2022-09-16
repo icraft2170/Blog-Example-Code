@@ -41,6 +41,7 @@ public class PubSub {
       }
     };
 
+    // Cold observer
     pub.subscribe(sub);
 
   }
