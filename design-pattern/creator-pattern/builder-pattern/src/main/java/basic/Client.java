@@ -1,7 +1,6 @@
 package basic;
 
 public class Client {
-
   public static void main(String[] args) {
     Builder builderA = new ConcreteBuilder();
     Product productA = builderA.title("상품 A")
