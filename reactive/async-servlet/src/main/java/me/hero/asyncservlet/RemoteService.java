@@ -13,6 +13,7 @@ public class RemoteService {
     @GetMapping("/service")
     public String rest(@RequestParam String req) throws InterruptedException {
       Thread.sleep(2000);
+//      throw new RuntimeException("알 수 없는 에러 발생");
       return req + " - service1";
     }
 

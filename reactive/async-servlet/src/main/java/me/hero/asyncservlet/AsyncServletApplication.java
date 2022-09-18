@@ -24,32 +24,9 @@ import org.springframework.web.context.request.async.DeferredResult;
 @SpringBootApplication
 @EnableAsync
 public class AsyncServletApplication {
-//  @RestController
-//  public static class MyController {
-//    RestTemplate restTemplate = new RestTemplate();
-//    @GetMapping("/rest")
-//    public String rest(@RequestParam int idx) {
-//      String res = restTemplate.getForObject("http://localhost:8081/service?req={req}",
-//          String.class, "rest" + idx);
-//      return res;
-//    }
-//  }
 
-//  @RestController
-//  public static class MyController {
-//    AsyncRestTemplate restTemplate = new AsyncRestTemplate();
-//    @GetMapping("/rest")
-//    public ListenableFuture<ResponseEntity<String>> rest(@RequestParam int idx) {
-//      return restTemplate.getForEntity("http://localhost:8081/service?req={req}",
-//          String.class, "rest" + idx);
-//    }
-//  }
-
-  // Call Back Hellllllllllllllllllllllllllllllllllllllllll
-  // 받아서 가공한다.
   @RestController
   public static class MyController {
-
     public static final String URL1 = "http://localhost:8081/service?req={req}";
     public static final String URL2 = "http://localhost:8081/service2?req={req}";
     @Autowired
@@ -63,46 +40,67 @@ public class AsyncServletApplication {
 
       Completion.from(restTemplate.getForEntity(URL1, String.class, "rest" + idx))
           .andApply(s1 -> restTemplate.getForEntity(URL2, String.class, s1.getBody()))
-          .andAccept(s2 -> deferredResult.setResult(s2.getBody()));
-
-//      ListenableFuture<ResponseEntity<String>> f1 = restTemplate.getForEntity(URL1, String.class, "rest" + idx);
-//      f1.addCallback(s -> {
-//        ListenableFuture<ResponseEntity<String>> f2 = restTemplate.getForEntity(URL2, String.class, s.getBody());
-//              f2.addCallback(s2 -> {
-//                ListenableFuture<String> f3 = myService.work(s2.getBody());
-//                    f3.addCallback(
-//                        result -> deferredResult.setResult(result),
-//                        result1 -> deferredResult.setErrorResult(result1)
-//                    );
-//              }, e -> {
-//                deferredResult.setErrorResult(e.getMessage());
-//              });
-//      }, e -> {
-//        deferredResult.setErrorResult(e.getMessage());
-//      });
+          .andApply(s3 -> myService.work(s3.getBody()))
+          .andError(result -> deferredResult.setErrorResult(result.toString()))
+          .andAccept(deferredResult::setResult);
 
       return deferredResult;
     }
   }
 
-  public static class Completion {
-    Completion next;
-    Consumer<ResponseEntity<String>> con;
-    Function<ResponseEntity<String>, ListenableFuture<ResponseEntity<String>>> fn;
-    public Completion() {
-    }
+  public static class AcceptCompletion<S> extends Completion<S,Void> {
+    Consumer<S> con;
 
-    public Completion(Consumer<ResponseEntity<String>> con) {
+    public AcceptCompletion(Consumer<S> con) {
       this.con = con;
     }
 
-    public Completion(
-        Function<ResponseEntity<String>, ListenableFuture<ResponseEntity<String>>> fn) {
+    @Override
+    void run(S value) {
+      con.accept(value);
+    }
+  }
+
+  public static class ApplyCompletion<S,T> extends Completion<S,T> {
+    Function<S, ListenableFuture<T >> fn;
+    public ApplyCompletion(
+        Function<S, ListenableFuture<T>> fn) {
       this.fn = fn;
     }
 
-    public static Completion from(ListenableFuture<ResponseEntity<String>> lf) {
-      Completion completion = new Completion();
+    @Override
+    void run(S value) {
+      ListenableFuture<T> lf = fn.apply(value);
+      lf.addCallback(this::complete, this::error);
+    }
+  }
+
+  public static class ErrorCompletion<T> extends Completion<T, T> {
+    Consumer<Throwable> econ;
+
+    public ErrorCompletion(Consumer<Throwable> econ) {
+      this.econ = econ;
+    }
+
+    @Override
+    void run(T value) {
+      if (next != null) next.run(value);
+    }
+
+    @Override
+    void error(Throwable e) {
+      econ.accept(e);
+    }
+  }
+
+
+  public static class Completion<S,T> {
+    Completion next;
+    public Completion() {
+    }
+
+    public static <S,T> Completion<S,T> from(ListenableFuture<T> lf) {
+      Completion<S,T> completion = new Completion<>();
       lf.addCallback(
           completion::complete,
           completion::error
@@ -110,40 +108,37 @@ public class AsyncServletApplication {
       return completion;
     }
 
-
-    public void andAccept(Consumer<ResponseEntity<String>> consumer) {
-      Completion newCompletion = new Completion(consumer);
-      this.next = newCompletion;
-    }
-
-
-
-    public Completion andApply(
-        Function<ResponseEntity<String>, ListenableFuture<ResponseEntity<String>>> fn) {
-      Completion newCompletion = new Completion(fn);
+    public <V> Completion<T,V> andApply(
+        Function<T, ListenableFuture<V>> fn) {
+      Completion<T,V> newCompletion = new ApplyCompletion<>(fn);
       this.next = newCompletion;
       return newCompletion;
     }
 
+    public Completion<T,T> andError(Consumer<Throwable> consumer) {
+      Completion<T, T> newCompletion = new ErrorCompletion<>(consumer);
+      this.next = newCompletion;
+      return newCompletion;
+    }
 
-    void complete(ResponseEntity<String> s) {
+    public void andAccept(Consumer<T> consumer) {
+      Completion<T, Void> newCompletion = new AcceptCompletion<>(consumer);
+      this.next = newCompletion;
+    }
+
+
+    void complete(T s) {
       if (next != null) next.run(s);
     }
-
-    void run(ResponseEntity<String> value) {
-      if(con != null) con.accept(value);
-      else if (fn != null) {
-        ListenableFuture<ResponseEntity<String>> lf = fn.apply(value);
-        lf.addCallback(this::complete, this::error);
-      }
-    }
-
+    void run(S value) {}
     void error(Throwable e) {
-
+      if(next != null) next.error(e);
     }
 
   }
 
+  
+  
 
   @Service
   public static class MyService {
