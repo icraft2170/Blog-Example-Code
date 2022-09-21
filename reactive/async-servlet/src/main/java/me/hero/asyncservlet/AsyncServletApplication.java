@@ -31,19 +31,16 @@ public class AsyncServletApplication {
     public static final String URL2 = "http://localhost:8081/service2?req={req}";
     @Autowired
     MyService myService;
-
     AsyncRestTemplate restTemplate = new AsyncRestTemplate(
         new Netty4ClientHttpRequestFactory(new NioEventLoopGroup(1)));
     @GetMapping("/rest")
     public DeferredResult<String> rest(@RequestParam int idx) {
       DeferredResult<String> deferredResult = new DeferredResult<>();
-
       Completion.from(restTemplate.getForEntity(URL1, String.class, "rest" + idx))
           .andApply(s1 -> restTemplate.getForEntity(URL2, String.class, s1.getBody()))
           .andApply(s3 -> myService.work(s3.getBody()))
           .andError(result -> deferredResult.setErrorResult(result.toString()))
           .andAccept(deferredResult::setResult);
-
       return deferredResult;
     }
   }
@@ -136,9 +133,6 @@ public class AsyncServletApplication {
     }
 
   }
-
-  
-  
 
   @Service
   public static class MyService {
