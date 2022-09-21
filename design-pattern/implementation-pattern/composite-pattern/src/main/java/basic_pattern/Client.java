@@ -5,9 +5,10 @@ import java.util.List;
 
 public class Client {
 
+  static Component composite;
   public static void main(String[] args) {
     List<Component> components = Arrays.asList(new FirstLeaf(), new SecondLeaf());
-    Composite composite = new Composite(components);
+    composite = new Composite(components);
     composite.operation();
   }
 }
