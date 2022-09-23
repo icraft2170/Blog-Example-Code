@@ -12,7 +12,7 @@ public class Test {
   public static void main(String[] args) {
     long countTotal = 0L;
     for (int i = 0; i < MAX_VALUE; i++) {
-      int target = (int) (Math.random() * NUMBERS);
+      int target = (int) (Math.random() * NUMBERS + 1);
       int[] array = Arrays.stream(IntStream.range(1, NUMBERS).toArray()).toArray();
       int count = search.binarySearch(array, target);
       countTotal += count;
