@@ -20,5 +20,5 @@ public class Test {
     long avgCount = countTotal / MAX_VALUE;
     System.out.println(avgCount);
   }
-  // 1_000_000에 대해 100000 테스트 평균 18
+  // 1_000 대해 100000000번 테스트 평균 5회
 }
