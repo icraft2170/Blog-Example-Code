@@ -7,7 +7,11 @@ public class Client {
     Iterator<Integer> iterator = aggregate.createIterator();
     while (iterator.hasNext()) {
       Integer next = iterator.getNext();
-      System.out.println(next);
+      if (!iterator.hasNext()) {
+        System.out.print(next);
+        break;
+      }
+      System.out.print(next + " ,");
     }
   }
 }
