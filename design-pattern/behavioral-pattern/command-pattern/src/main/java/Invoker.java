@@ -15,7 +15,7 @@ public class Invoker {
     Receiver chad = new Receiver("Chad");
 
     Invoker heroInvoker = new Invoker(new FirstConcreteCommand(hero));
-    Invoker chadInvoker = new Invoker(new SecondConcreteCommand(chad));
+    Invoker chadInvoker = new Invoker(() -> System.out.println("두번째 구체 명령 - receiver : " + chad.getName()));
 
     heroInvoker.invoke();
     chadInvoker.invoke();
