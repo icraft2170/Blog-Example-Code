@@ -1,2 +1,3 @@
-package PACKAGE_NAME;public interface Expression {
+public interface Expression {
+  void interpret(Context context);
 }

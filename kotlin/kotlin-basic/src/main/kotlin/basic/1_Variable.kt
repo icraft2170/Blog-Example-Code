@@ -1,4 +1,4 @@
-package `1_Variable`
+package basic
 
 fun main() {
     val number = 1
